@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/* Özel primary renk sınıfları */
+@layer utilities {
+  .bg-primary {
+    background-color: #f43f5e;
+  }
+  .bg-primary-hover {
+    background-color: #e11d48;
+  }
+  .hover\:bg-primary:hover {
+    background-color: #f43f5e;
+  }
+  .hover\:bg-primary-hover:hover {
+    background-color: #e11d48;
+  }
+  .hover\:bg-primary-600:hover {
+    background-color: #e11d48;
+  }
+  .text-primary {
+    color: #f43f5e;
+  }
+  .border-primary {
+    border-color: #f43f5e;
+  }
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #fff;
+  color: #111;
+}

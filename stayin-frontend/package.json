@@ -1,0 +1,32 @@
+{
+  "name": "stayin-website",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@primeuix/themes": "^1.2.5",
+    "@primevue/themes": "^4.4.1",
+    "@tailwindcss/vite": "^4.1.14",
+    "@vue-leaflet/vue-leaflet": "^0.10.1",
+    "@vuepic/vue-datepicker": "^11.0.2",
+    "axios": "^1.12.2",
+    "leaflet": "^1.9.4",
+    "object-assign": "^4.1.1",
+    "pinia": "^3.0.3",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.4.1",
+    "tailwindcss": "^4.1.14",
+    "vue": "^3.5.22",
+    "vue-leaflet": "^0.1.0",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^7.1.7"
+  }
+}
