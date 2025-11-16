@@ -42,31 +42,16 @@ const handleForgotPassword = async () => {
             email: email.value
         });
         
-        // Başarılı istek sonrası
         toast.add({ 
             severity: 'success', 
             summary: 'Başarılı', 
-            detail: 'Şifre yenileme kodu e-posta adresinize gönderildi.',
-
+            detail: res.data.message || 'Şifre yenileme kodu e-posta adresinize gönderildi.',
             life: 3000 
-
         });
-      
-    // İkinci ekrana geç 
-    isCodeSent.value = true;
-
+        isCodeSent.value = true;
         
     } catch (err) {
-        console.error("Forgot password hatası:", err);
-        console.error("Response:", err.response?.data);
-        
-        if (err.response && err.response.data && err.response.data.message) {
-            error.value = err.response.data.message;
-        } else if (err.response && err.response.data) {
-            error.value = JSON.stringify(err.response.data);
-        } else {
-            error.value = "İstek başarısız. Lütfen tekrar deneyin.";
-        }
+        error.value = err.response?.data?.message || "İstek başarısız. Lütfen tekrar deneyin.";
     }
 }
 
@@ -86,33 +71,29 @@ const handleVerifyCode = async () => {
         toast.add({ 
             severity: 'success', 
             summary: 'Başarılı', 
-            detail: 'Kod doğrulandı. Şimdi yeni şifrenizi belirleyin.',
+            detail: res.data.message || 'Kod doğrulandı. Şimdi yeni şifrenizi belirleyin.',
             life: 3000 
         });
         isCodeVerified.value = true;
+        
     } catch (err) {
-        console.error("Doğrulama hatası:", err);
-        console.error("Response:", err.response?.data);
-        if (err.response && err.response.data && err.response.data.message) {
-            error.value = err.response.data.message;
-        } else if (err.response && err.response.data) {
-            error.value = JSON.stringify(err.response.data);
-        } else {
-            error.value = "Doğrulama başarısız. Lütfen tekrar deneyin.";
-        }
+        error.value = err.response?.data?.message || "Doğrulama başarısız. Lütfen tekrar deneyin.";
     }
 }
 
 const handleResetPassword = async () => {
     error.value = "";
+    
     if (!newPassword.value || !newPasswordRepeat.value) {
         error.value = "Lütfen tüm alanları doldurun.";
         return;
     }
+    
     if (newPassword.value !== newPasswordRepeat.value) {
         error.value = "Şifreler eşleşmiyor.";
         return;
     }
+    
     try {
         const res = await api.post("/Auth/reset-password", {
             email: email.value,
@@ -120,22 +101,28 @@ const handleResetPassword = async () => {
             newPassword: newPassword.value,
             newPasswordConfirm: newPasswordRepeat.value
         });
+        
         toast.add({ 
             severity: 'success', 
             summary: 'Başarılı', 
-            detail: 'Şifreniz başarıyla güncellendi.',
+            detail: res.data.message || 'Şifreniz başarıyla güncellendi.',
             life: 3000 
         });
-        emit('forgot-password-success', email.value);
-        closeModal();
+        
+        // Modal'ı kapat ve event emit et
+        setTimeout(() => {
+            closeModal();
+            emit('forgot-password-success', email.value);
+        }, 1000);
+        
     } catch (err) {
-        if (err.response && err.response.data && err.response.data.message) {
-            error.value = err.response.data.message;
-        } else if (err.response && err.response.data) {
-            error.value = JSON.stringify(err.response.data);
-        } else {
-            error.value = "Şifre güncelleme başarısız. Lütfen tekrar deneyin.";
-        }
+        error.value = err.response?.data?.message || "Şifre güncelleme başarısız. Lütfen tekrar deneyin.";
+        toast.add({ 
+            severity: 'error', 
+            summary: 'Hata', 
+            detail: error.value,
+            life: 3000 
+        });
     }
 }
 </script>
@@ -201,4 +188,3 @@ const handleResetPassword = async () => {
         </div>
     </div>
 </template>
-

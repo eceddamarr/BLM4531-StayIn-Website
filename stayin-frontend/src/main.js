@@ -9,6 +9,9 @@ import Aura from '@primevue/themes/aura'
 import ToastService from 'primevue/toastservice';
 import 'primeicons/primeicons.css';
 
+// Global user state'i başlat
+import { initUser } from './stores/userStore';
+initUser();
 
 const app = createApp(App);
 app.use(PrimeVue, {

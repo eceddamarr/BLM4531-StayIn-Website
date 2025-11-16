@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import api from "@/services/api.js";
+import { setUser } from '@/stores/userStore';
 
 const props = defineProps({
     isOpen: Boolean,
@@ -27,9 +28,8 @@ const handleLogin = async () => {
       email: email.value,
       password: password.value
     });
-    // Başarılı login: token ve user'ı kaydet
-    localStorage.setItem("token", res.data.token);
-    localStorage.setItem("user", JSON.stringify(res.data.user));
+    // Global state'i güncelle (otomatik olarak localStorage'a kaydeder)
+    setUser(res.data.user, res.data.token);
     // Parent'a haber ver
     emit('login-success', res.data.user);
     // Formu sıfırla ve modalı kapat

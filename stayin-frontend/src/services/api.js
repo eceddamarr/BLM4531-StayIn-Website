@@ -49,4 +49,19 @@ export const myListingsAPI = {
     api.delete(`/MyListings/${id}`),
 };
 
+// Listing API
+export const listingAPI = {
+  // Tüm ilanları getir
+  getAllListings: () => api.get('/Listing/all'),
+  
+  // İlan detayını getir
+  getListingById: (id) => api.get(`/Listing/${id}`),
+};
+
+// User API
+export const userAPI = {
+  // Kullanıcı bilgisini getir
+  getUserById: (id) => api.get(`/User/${id}`),
+};
+
 export default api;

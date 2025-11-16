@@ -83,7 +83,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate(); // Migration'ları uygula
-    
+
     // Eğer hiç kullanıcı yoksa bir admin ekle
     if (!db.Users.Any())
     {

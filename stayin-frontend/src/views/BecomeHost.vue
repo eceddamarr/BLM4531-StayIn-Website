@@ -9,6 +9,7 @@ import FileUpload from 'primevue/fileupload';
 import { LMap, LTileLayer, LMarker } from '@vue-leaflet/vue-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { myListingsAPI } from '@/services/api.js';
+import { user, checkAuth } from '@/stores/userStore';
 
 const router = useRouter();
 const route = useRoute();
@@ -17,18 +18,16 @@ const currentStep = ref(0);
 const steps = Array(10).fill({ label: '' });
 
 const isLoginModalOpen = ref(false);
-const user = ref(null);
 const loginError = ref("");
 
 // Edit mode kontrolü
 const editMode = ref(false);
 const editingListingId = ref(null);
 
-// Kullanıcı kontrolü
-if (!localStorage.getItem("user")) {
+// Kullanıcı kontrolü (global state kullan)
+checkAuth();
+if (!user.value) {
   isLoginModalOpen.value = true;
-} else {
-  user.value = JSON.parse(localStorage.getItem("user"));
 }
 
 // Sayfa yüklendiğinde edit mode kontrolü
@@ -120,9 +119,13 @@ async function loadListingForEdit(listingId) {
 const closeLoginModal = () => {
   loginError.value = '';
   isLoginModalOpen.value = false;
+  // Kullanıcı giriş yapmadıysa ana sayfaya yönlendir
+  if (!user.value) {
+    router.push('/');
+  }
 };
 const handleLogin = (userData) => {
-  user.value = userData;
+  // User artık global state'te, burada bir şey yapmaya gerek yok
   closeLoginModal();
 };
 const nextStep = () => {

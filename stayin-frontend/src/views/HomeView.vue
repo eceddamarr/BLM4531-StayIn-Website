@@ -4,15 +4,18 @@ import LoginModal from '../components/LoginModal.vue';
 import RegisterModal from '../components/RegisterModal.vue';
 import ForgotPasswordModal from '../components/ForgotPasswordModal.vue';
 
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router';
 
-import api, { favoritesAPI } from "@/services/api.js";
+import api, { favoritesAPI, listingAPI } from "@/services/api.js";
+import { user, clearUser } from '@/stores/userStore';
+
+const router = useRouter();
 
 
 const isLoginModalOpen = ref(false)
 const isRegisterModalOpen = ref(false)
 const isForgotPasswordModalOpen = ref(false)
-const user = ref(null);
 const loginError = ref("");
 const registerError = ref("");
 const isProfileMenuOpen = ref(false);
@@ -27,14 +30,20 @@ const loadFavorites = async () => {
     favorites.value = [];
     return;
   }
+  
   try {
     const response = await favoritesAPI.getFavorites();
+    
     // Backend favorileri obje olarak döndürüyor: { favorites: [...] }
-    const favData = response.data?.favorites || [];
+    const favData = response.data?.favorites || response.data || [];
+    
     // Sadece ID'leri al - Backend'de Id büyük harfle
     favorites.value = favData.map(listing => listing.Id || listing.id);
   } catch (error) {
-    console.error('Favoriler yüklenemedi:', error);
+    // 401 hatası normaldir (kullanıcı çıkış yapmış olabilir)
+    if (error.response?.status !== 401) {
+      console.error('Favoriler yüklenemedi:', error);
+    }
     favorites.value = [];
   }
 };
@@ -95,28 +104,25 @@ const getListingId = (listing) => {
 const listings = ref([]);
 const loadListings = async () => {
   try {
-    const response = await fetch('http://localhost:5211/api/Listing/all');
-    if (response.ok) {
-      const data = await response.json();
-      // Backend'den gelen property'leri normalize et (büyük harflerden küçük harfe)
-      listings.value = data.map(listing => ({
-        id: listing.Id || listing.id,
-        title: listing.Title || listing.title,
-        description: listing.Description || listing.description,
-        placeType: listing.PlaceType || listing.placeType,
-        guests: listing.Guests || listing.guests,
-        bedrooms: listing.Bedrooms || listing.bedrooms,
-        beds: listing.Beds || listing.beds,
-        price: listing.Price || listing.price,
-        photoUrls: listing.PhotoUrls || listing.photoUrls,
-        address: listing.Address || listing.address,
-        userId: listing.UserId || listing.userId
-      }));
-    } else {
-      console.error('API yanıt hatası:', response.status);
-    }
+    const response = await listingAPI.getAllListings();
+    const data = response.data;
+    // Backend'den gelen property'leri normalize et (büyük harflerden küçük harfe)
+    listings.value = data.map(listing => ({
+      id: listing.Id || listing.id,
+      title: listing.Title || listing.title,
+      description: listing.Description || listing.description,
+      placeType: listing.PlaceType || listing.placeType,
+      guests: listing.Guests || listing.guests,
+      bedrooms: listing.Bedrooms || listing.bedrooms,
+      beds: listing.Beds || listing.beds,
+      price: listing.Price || listing.price,
+      photoUrls: listing.PhotoUrls || listing.photoUrls,
+      address: listing.Address || listing.address,
+      userId: listing.UserId || listing.userId
+    }));
   } catch (err) {
     console.error('İlanlar yüklenemedi:', err);
+    alert('İlanlar yüklenirken bir hata oluştu');
   }
 };
 
@@ -127,11 +133,21 @@ const handleSearch = (query) => {
 
 // Filtrelenmiş ilanlar
 const filteredListings = computed(() => {
-  if (!searchQuery.value) {
-    return listings.value;
+  // Önce kullanıcının kendi ilanlarını filtrele
+  let result = listings.value;
+  
+  // Giriş yapmış kullanıcının kendi ilanlarını gizle
+  if (user.value) {
+    const currentUserId = user.value.id || user.value.Id;
+    result = result.filter(listing => listing.userId !== currentUserId);
   }
   
-  return listings.value.filter(listing => {
+  // Arama filtresi
+  if (!searchQuery.value) {
+    return result;
+  }
+  
+  return result.filter(listing => {
     const searchLower = searchQuery.value;
     const title = listing.title?.toLowerCase() || '';
     const description = listing.description?.toLowerCase() || '';
@@ -152,12 +168,23 @@ const filteredListings = computed(() => {
 });
 
 onMounted(() => {
-  const storedUser = localStorage.getItem("user");
-  if (storedUser) {
-    user.value = JSON.parse(storedUser);
-  }
+  // User artık global state'ten geliyor, localStorage'dan yüklemeye gerek yok
   loadListings();
-  loadFavorites();
+  // Favorileri yükle - user zaten initUser ile yüklendi
+  if (user.value) {
+    loadFavorites();
+  }
+});
+
+// User değişikliklerini izle (giriş/çıkış)
+watch(user, (newUser) => {
+  if (newUser) {
+    // Kullanıcı giriş yaptı, favorileri yükle
+    loadFavorites();
+  } else {
+    // Kullanıcı çıkış yaptı, favorileri temizle
+    favorites.value = [];
+  }
 });
 
 
@@ -195,13 +222,13 @@ const switchToForgotPassword = () => {
 }
 
 const handleLogin = (userData) => {
-  user.value = userData;
+  // User artık global state'te, sadece favorileri yükle
   closeLoginModal();
   loadFavorites(); // Kullanıcı giriş yaptıktan sonra favorilerini yükle
 };
 
 const handleRegister = (userData) => {
-  user.value = userData;
+  // User artık global state'te
   closeRegisterModal();
 }
 
@@ -211,9 +238,7 @@ const handleForgotPassword = () => {
 };
 
 const logout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  user.value = null;
+  clearUser(); // Global state'i temizle (localStorage'dan da siler)
   favorites.value = []; // Çıkış yapınca favorileri temizle
   isProfileMenuOpen.value = false;
 };
@@ -311,6 +336,7 @@ const logout = () => {
         <div
           v-for="listing in filteredListings"
           :key="listing.id"
+          @click="router.push(`/listing/${listing.id}`)"
           class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-200 cursor-pointer"
         >
           <div class="relative h-48">

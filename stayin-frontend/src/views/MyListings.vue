@@ -2,19 +2,19 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { myListingsAPI } from '@/services/api.js';
+import { user, checkAuth } from '@/stores/userStore';
 
 const router = useRouter();
-const user = ref(null);
 const myListings = ref([]);
 const isLoading = ref(true);
 
 onMounted(async () => {
-  const storedUser = localStorage.getItem("user");
-  if (!storedUser) {
+  // Global state'ten user kontrolü
+  checkAuth();
+  if (!user.value) {
     router.push('/');
     return;
   }
-  user.value = JSON.parse(storedUser);
   await loadMyListings();
 });
 

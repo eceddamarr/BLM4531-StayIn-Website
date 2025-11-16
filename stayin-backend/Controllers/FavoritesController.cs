@@ -107,7 +107,7 @@ namespace StayIn.Api.Controllers
             // Favorilere ekle
             user.Favorites.Add(listingId);
             
-            // ⚡ ÖNEMLI: Entity Framework'ün List değişikliğini algılaması için
+            // Entity Framework'ün List değişikliğini algılaması için
             _context.Entry(user).Property(u => u.Favorites).IsModified = true;
             await _context.SaveChangesAsync();
 

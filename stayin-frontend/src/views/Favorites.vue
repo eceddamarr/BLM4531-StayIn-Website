@@ -2,21 +2,21 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { favoritesAPI } from '@/services/api.js';
+import { user, checkAuth } from '@/stores/userStore';
 
 const router = useRouter();
 const favoriteListings = ref([]);
-const user = ref(null);
 const isLoading = ref(true);
 
 // Kullanıcı kontrolü ve favorileri yükle
 onMounted(async () => {
-  const storedUser = localStorage.getItem("user");
-  if (!storedUser) {
+  // Global state'ten user kontrolü
+  checkAuth();
+  if (!user.value) {
     // Giriş yapmamışsa ana sayfaya yönlendir
     router.push('/');
     return;
   }
-  user.value = JSON.parse(storedUser);
   await loadFavorites();
 });
 
@@ -28,7 +28,20 @@ const loadFavorites = async () => {
     isLoading.value = true;
     const response = await favoritesAPI.getFavorites();
     
-    favoriteListings.value = response.data?.favorites || [];
+    const rawFavorites = response.data?.favorites || [];
+    
+    // Backend'den gelen property'leri normalize et
+    favoriteListings.value = rawFavorites.map(listing => ({
+      id: listing.Id || listing.id,
+      title: listing.Title || listing.title,
+      description: listing.Description || listing.description,
+      price: listing.Price || listing.price,
+      photoUrls: listing.PhotoUrls || listing.photoUrls,
+      address: listing.Address || listing.address,
+      guests: listing.Guests || listing.guests,
+      bedrooms: listing.Bedrooms || listing.bedrooms,
+      beds: listing.Beds || listing.beds
+    }));
     
   } catch (error) {
     console.error('Favoriler yüklenemedi:', error);
@@ -89,6 +102,7 @@ const removeFavorite = async (listingId) => {
         <div
           v-for="listing in favoriteListings"
           :key="listing.id"
+          @click="router.push(`/listing/${listing.id || listing.Id}`)"
           class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-200 cursor-pointer"
         >
           <div class="relative h-48">

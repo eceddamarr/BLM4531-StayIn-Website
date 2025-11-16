@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import api from "@/services/api.js";
+import { setUser } from '@/stores/userStore';
 
 const props = defineProps({
     isOpen: Boolean,
@@ -34,9 +35,8 @@ const handleRegister = async () => {
       password: password.value,
       passwordConfirm: confirmPassword.value
     });
-    // Başarılı register: token ve user'ı kaydet
-    localStorage.setItem("token", res.data.token);
-    localStorage.setItem("user", JSON.stringify(res.data.user));
+    // Global state'i güncelle (otomatik olarak localStorage'a kaydeder)
+    setUser(res.data.user, res.data.token);
     // Parent'a haber ver
     emit('register-success', res.data.user);
     // Sadece modalı kapat
