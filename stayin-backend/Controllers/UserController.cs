@@ -4,8 +4,8 @@ using StayIn.Api.Data;
 
 namespace StayIn.Api.Controllers
 {
-    [ApiController]
-    [Route("api/[controller]")]
+    [ApiController] 
+    [Route("api/[controller]")] 
     public class UserController : ControllerBase
     {
         private readonly AppDbContext _context;

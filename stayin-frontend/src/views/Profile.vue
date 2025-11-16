@@ -52,7 +52,7 @@ onMounted(() => {
           </div>
           
           <div class="pt-4">
-            <p class="text-gray-500 text-sm">Profil düzenleme özellikleri yakında eklenecek...</p>
+            <p class="text-gray-500 text-sm">Profil düzenleme özellikleri</p>
           </div>
         </div>
       </div>

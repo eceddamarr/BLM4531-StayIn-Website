@@ -10,7 +10,7 @@ namespace StayIn.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize] // Tüm eylemler için kimlik doğrulama gerektir
     public class MyListingsController : ControllerBase
     {
         private readonly AppDbContext _context;

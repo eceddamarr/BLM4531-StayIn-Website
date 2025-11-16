@@ -132,7 +132,7 @@ const nextStep = () => {
   if (currentStep.value < steps.length - 1) currentStep.value++;
 };
 
-// İlanı yayınla veya güncelle fonksiyonu
+// İlanı yayınla veya güncelle fonksiyonu  (POST)
 async function publishListing() {
   const listing = {
     placeType: selectedPlace.value,
@@ -161,6 +161,7 @@ async function publishListing() {
     let response;
     
     if (editMode.value && editingListingId.value) {
+      
       // Güncelleme modu
       response = await myListingsAPI.updateListing(editingListingId.value, listing);
       
@@ -171,7 +172,7 @@ async function publishListing() {
         life: 3000 
       });
     } else {
-      // Yeni ilan oluşturma
+      // POST işlemi: backend'e yeni ilan gönder
       response = await myListingsAPI.createListing(listing);
       
       toast.add({ 

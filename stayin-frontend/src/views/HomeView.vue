@@ -7,7 +7,7 @@ import ForgotPasswordModal from '../components/ForgotPasswordModal.vue';
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router';
 
-import api, { favoritesAPI, listingAPI } from "@/services/api.js";
+import { favoritesAPI, listingAPI } from "@/services/api.js";
 import { user, clearUser } from '@/stores/userStore';
 
 const router = useRouter();

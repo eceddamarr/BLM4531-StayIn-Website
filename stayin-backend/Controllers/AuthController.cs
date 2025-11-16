@@ -220,6 +220,7 @@ public class AuthController : ControllerBase
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+         // Kullanıcı bilgilerini token'a ekle
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
@@ -228,6 +229,7 @@ public class AuthController : ControllerBase
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
+        // Token'ı imzala (şifrele)
         var token = new JwtSecurityToken(
             issuer: jwt["Issuer"],
             audience: jwt["Audience"],
@@ -237,6 +239,7 @@ public class AuthController : ControllerBase
             signingCredentials: creds
         );
 
+        // String'e çevir ve döndür
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
