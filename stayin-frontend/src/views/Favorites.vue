@@ -125,7 +125,7 @@ const removeFavorite = async (listingId) => {
             <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ listing.description }}</p>
             <div class="flex items-center justify-between">
               <span class="font-bold text-primary text-lg">₺{{ listing.price }}</span>
-              <span class="text-gray-500 text-sm">gecelik</span>
+              <span class="text-gray-500 text-sm">/gecelik</span>
             </div>
             <div class="mt-2 text-xs text-gray-400">
               {{ listing.guests }} misafir · {{ listing.bedrooms }} yatak odası · {{ listing.beds }} yatak

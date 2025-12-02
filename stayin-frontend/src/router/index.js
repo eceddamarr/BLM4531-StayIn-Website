@@ -33,6 +33,16 @@ const routes = [
     component: () => import('../views/Reservations.vue')
   },
   {
+    path: '/my-reservations',
+    name: 'MyReservations',
+    component: () => import('../views/MyReservations.vue')
+  },
+  {
+    path: '/incoming-requests',
+    name: 'IncomingRequests',
+    component: () => import('../views/IncomingRequests.vue')
+  },
+  {
     path: '/listing/:id',
     name: 'ListingDetail',
     component: () => import('../views/ListingDetail.vue')

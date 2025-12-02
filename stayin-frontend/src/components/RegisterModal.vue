@@ -13,6 +13,7 @@ const emit = defineEmits(['close', 'register-success', 'switch-to-login'])
 // Reactive variables
 const fullName = ref('')
 const email = ref('')
+const phoneNumber = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const error = ref('')
@@ -20,6 +21,7 @@ const error = ref('')
 const closeModal = () => {
     fullName.value = '';
     email.value = '';
+    phoneNumber.value = '';
     password.value = '';
     confirmPassword.value = '';
     error.value = '';
@@ -32,6 +34,7 @@ const handleRegister = async () => {
     const res = await api.post("/Auth/register", {
       fullName: fullName.value,
       email: email.value,
+      phoneNumber: phoneNumber.value.replace(/\s/g, ''), // Boşlukları temizle
       password: password.value,
       passwordConfirm: confirmPassword.value
     });
@@ -73,6 +76,17 @@ const switchToLogin = () => {
 
          <p class="mb-2 text-sm font-medium text-gray-700">E-posta</p>
         <input v-model="email" type="email" placeholder="Email adresinizi girin" class="border border-gray-300 rounded-lg py-2 px-4 w-full mb-4 bg-gray-50 focus:bg-white focus:border-primary outline-none transition" required>
+
+         <p class="mb-2 text-sm font-medium text-gray-700">Telefon Numarası</p>
+        <input 
+          v-model="phoneNumber" 
+          type="tel" 
+          placeholder="05XX XXX XX XX" 
+          class="border border-gray-300 rounded-lg py-2 px-4 w-full mb-4 bg-gray-50 focus:bg-white focus:border-primary outline-none transition" 
+          required 
+          pattern="[0-9\s]{13,14}"
+          title="Lütfen geçerli bir telefon numarası girin (örn: 05XX XXX XX XX)"
+        >
 
          <p class="mb-2 text-sm font-medium text-gray-700">Şifre</p>
         <input v-model="password" type="password" placeholder="Şifrenizi girin" class="border border-gray-300 rounded-lg py-2 px-4 w-full mb-4 bg-gray-50 focus:bg-white focus:border-primary outline-none transition" required>

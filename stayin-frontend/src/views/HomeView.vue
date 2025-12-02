@@ -7,7 +7,7 @@ import ForgotPasswordModal from '../components/ForgotPasswordModal.vue';
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router';
 
-import { favoritesAPI, listingAPI } from "@/services/api.js";
+import { favoritesAPI, listingAPI, reviewAPI } from "@/services/api.js";
 import { user, clearUser } from '@/stores/userStore';
 
 const router = useRouter();
@@ -107,7 +107,7 @@ const loadListings = async () => {
     const response = await listingAPI.getAllListings();
     const data = response.data;
     // Backend'den gelen property'leri normalize et (büyük harflerden küçük harfe)
-    listings.value = data.map(listing => ({
+    const listingsWithoutRating = data.map(listing => ({
       id: listing.Id || listing.id,
       title: listing.Title || listing.title,
       description: listing.Description || listing.description,
@@ -118,8 +118,33 @@ const loadListings = async () => {
       price: listing.Price || listing.price,
       photoUrls: listing.PhotoUrls || listing.photoUrls,
       address: listing.Address || listing.address,
-      userId: listing.UserId || listing.userId
+      userId: listing.UserId || listing.userId,
+      isArchived: listing.IsArchived || listing.isArchived || false,
+      averageRating: 0,
+      totalReviews: 0
     }));
+    
+    // Her ilan için rating'i paralel olarak yükle
+    const listingsWithRatings = await Promise.all(
+      listingsWithoutRating.map(async (listing) => {
+        try {
+          const reviewResponse = await reviewAPI.getListingReviews(listing.id);
+          if (reviewResponse.data.success) {
+            return {
+              ...listing,
+              averageRating: reviewResponse.data.data.averageRating || 0,
+              totalReviews: reviewResponse.data.data.totalReviews || 0
+            };
+          }
+        } catch (error) {
+          // Rating yüklenemezse ilan yine de gösterilsin
+          console.error(`Rating yüklenemedi (${listing.id}):`, error);
+        }
+        return listing;
+      })
+    );
+    
+    listings.value = listingsWithRatings;
   } catch (err) {
     console.error('İlanlar yüklenemedi:', err);
     alert('İlanlar yüklenirken bir hata oluştu');
@@ -133,8 +158,8 @@ const handleSearch = (query) => {
 
 // Filtrelenmiş ilanlar
 const filteredListings = computed(() => {
-  // Önce kullanıcının kendi ilanlarını filtrele
-  let result = listings.value;
+  // Önce arşivlenmiş ilanları ve kullanıcının kendi ilanlarını filtrele
+  let result = listings.value.filter(listing => !listing.isArchived);
   
   // Giriş yapmış kullanıcının kendi ilanlarını gizle
   if (user.value) {
@@ -292,9 +317,14 @@ const logout = () => {
             <span>Favorilerim</span>
           </router-link>
           
-          <router-link to="/reservations" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-colors">
+          <router-link to="/my-reservations" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-colors">
             <i class="material-icons text-gray-600">event</i>
             <span>Rezervasyonlarım</span>
+          </router-link>
+          
+          <router-link to="/incoming-requests" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-colors">
+            <i class="material-icons text-gray-600">inbox</i>
+            <span>Gelen Talepler</span>
           </router-link>
           
           <hr class="my-2" />
@@ -361,10 +391,18 @@ const logout = () => {
           <div class="p-4">
             <h3 class="font-semibold text-lg mb-1 truncate">{{ listing.title }}</h3>
             <p class="text-gray-500 text-sm mb-2">{{ listing.address.addressCity }}, {{ listing.address.addressCountry }}</p>
+            
+            <!-- Rating -->
+            <div v-if="listing.averageRating > 0" class="flex items-center gap-1 mb-2">
+              <i class="material-icons text-yellow-400 text-sm">star</i>
+              <span class="text-sm font-semibold text-gray-800">{{ listing.averageRating.toFixed(1) }}</span>
+              <span class="text-xs text-gray-500">({{ listing.totalReviews }})</span>
+            </div>
+            
             <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ listing.description }}</p>
             <div class="flex items-center justify-between">
               <span class="font-bold text-primary text-lg">₺{{ listing.price }}</span>
-              <span class="text-gray-500 text-sm">gecelik</span>
+              <span class="text-gray-500 text-sm">/gecelik</span>
             </div>
             <div class="mt-2 text-xs text-gray-400">
               {{ listing.guests }} misafir · {{ listing.bedrooms }} yatak odası · {{ listing.beds }} yatak

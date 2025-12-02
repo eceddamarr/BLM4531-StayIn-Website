@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { favoritesAPI, listingAPI, userAPI } from '@/services/api.js';
+import { favoritesAPI, listingAPI, userAPI, reservationAPI, reviewAPI } from '@/services/api.js';
 import { user } from '@/stores/userStore';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
@@ -20,6 +20,16 @@ const checkInDate = ref('');
 const checkOutDate = ref('');
 const guests = ref(1);
 const isFavorite = ref(false);
+const hasExistingReservation = ref(false);
+const isCheckingReservation = ref(false);
+
+// Yorum state'leri
+const reviews = ref([]);
+const reviewSummary = ref({
+  totalReviews: 0,
+  averageRating: 0
+});
+const loadingReviews = ref(false);
 
 // İlan detaylarını yükle
 const loadListing = async () => {
@@ -43,7 +53,8 @@ const loadListing = async () => {
       amenities: data.Amenities || data.amenities || [],
       userId: data.UserId || data.userId,
       latitude: data.Latitude || data.latitude,
-      longitude: data.Longitude || data.longitude
+      longitude: data.Longitude || data.longitude,
+      isArchived: data.IsArchived || data.isArchived || false
     };
     
     // İlan sahibi bilgisini yükle
@@ -54,7 +65,11 @@ const loadListing = async () => {
     // Favori durumunu kontrol et
     if (user.value) {
       await checkFavoriteStatus();
+      await checkExistingReservation();
     }
+    
+    // Yorumları yükle
+    await loadReviews();
     
     // Haritayı yükle (DOM'un render olması için biraz bekle)
     await nextTick();
@@ -108,6 +123,36 @@ const checkFavoriteStatus = async () => {
     isFavorite.value = favIds.includes(listing.value.id);
   } catch (error) {
     isFavorite.value = false;
+  }
+};
+
+// Mevcut rezervasyon kontrolü
+const checkExistingReservation = async () => {
+  if (!user.value || !listing.value) return;
+  
+  try {
+    isCheckingReservation.value = true;
+    const response = await reservationAPI.getMyReservations();
+    const reservations = response.data?.reservations || response.data || [];
+    
+    // Bu ilana ait aktif rezervasyon var mı? (Pending veya gelecekteki Approved)
+    const existingReservation = reservations.find(r => {
+      const reservationListingId = r.ListingId || r.listingId;
+      const status = r.Status || r.status;
+      const checkOutDate = new Date(r.CheckOutDate || r.checkOutDate);
+      const today = new Date();
+      
+      // Pending veya tarihi geçmemiş Approved rezervasyonlar
+      return reservationListingId === listing.value.id && 
+             (status === 'Pending' || (status === 'Approved' && checkOutDate >= today));
+    });
+    
+    hasExistingReservation.value = !!existingReservation;
+  } catch (error) {
+    console.error('Rezervasyon kontrolü başarısız:', error);
+    hasExistingReservation.value = false;
+  } finally {
+    isCheckingReservation.value = false;
   }
 };
 
@@ -165,12 +210,32 @@ const isOwnListing = computed(() => {
 });
 
 // Rezervasyon yap
-const makeReservation = () => {
+const makeReservation = async () => {
   if (!user.value) {
     toast.add({
       severity: 'warn',
       summary: 'Uyarı',
       detail: 'Rezervasyon yapmak için giriş yapmalısınız',
+      life: 3000
+    });
+    return;
+  }
+  
+  if (hasExistingReservation.value) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Uyarı',
+      detail: 'Bu ilana zaten aktif bir rezervasyonunuz var',
+      life: 3000
+    });
+    return;
+  }
+  
+  if (listing.value.isArchived) {
+    toast.add({
+      severity: 'error',
+      summary: 'Hata',
+      detail: 'Bu ilan arşivlenmiş, rezervasyon yapılamaz',
       life: 3000
     });
     return;
@@ -206,13 +271,65 @@ const makeReservation = () => {
     return;
   }
   
-  // Rezervasyon işlemi (backend entegrasyonu sonra eklenebilir)
-  toast.add({
-    severity: 'success',
-    summary: 'Başarılı',
-    detail: `Rezervasyon talebi oluşturuldu!`,
-    life: 5000
-  });
+  try {
+    // Backend'e rezervasyon isteği gönder
+    const response = await reservationAPI.createReservation({
+      listingId: listing.value.id,
+      checkInDate: checkInDate.value,
+      checkOutDate: checkOutDate.value,
+      guests: guests.value
+    });
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Başarılı',
+      detail: response.data.message || 'Rezervasyon talebiniz gönderildi!',
+      life: 5000
+    });
+    
+    // Rezervasyon durumunu güncelle
+    hasExistingReservation.value = true;
+    
+    // Formu temizle
+    checkInDate.value = '';
+    checkOutDate.value = '';
+    guests.value = 1;
+    
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Hata',
+      detail: error.response?.data?.message || 'Rezervasyon oluşturulamadı',
+      life: 3000
+    });
+  }
+};
+
+// Yorumları yükle
+const loadReviews = async () => {
+  if (!listing.value) return;
+  
+  loadingReviews.value = true;
+  try {
+    const response = await reviewAPI.getListingReviews(listing.value.id);
+    if (response.data.success) {
+      reviewSummary.value = {
+        totalReviews: response.data.data.totalReviews,
+        averageRating: response.data.data.averageRating
+      };
+      reviews.value = response.data.data.reviews || [];
+    }
+  } catch (error) {
+    console.error('Yorumlar yüklenirken hata:', error);
+    reviews.value = [];
+  } finally {
+    loadingReviews.value = false;
+  }
+};
+
+// Yıldız oluşturma helper fonksiyonu
+const getStarArray = (rating) => {
+  return Array.from({ length: 5 }, (_, i) => i < Math.floor(rating));
 };
 
 // Resim navigasyonu
@@ -416,7 +533,7 @@ onMounted(() => {
           </div>
 
           <!-- Location -->
-          <div class="pb-8">
+          <div class="pb-8 border-b border-gray-200">
             <h3 class="text-xl font-semibold mb-4">Nerede olacaksınız</h3>
             
             <!-- Harita -->
@@ -424,12 +541,93 @@ onMounted(() => {
               <div :id="`map-${listing.id}`" style="height: 100%; width: 100%;"></div>
             </div>
           </div>
+
+          <!-- Reviews Section -->
+          <div class="pb-8">
+            <div class="flex items-center gap-4 mb-6">
+              <h3 class="text-xl font-semibold">Değerlendirmeler</h3>
+              <div v-if="reviewSummary.totalReviews > 0" class="flex items-center gap-2">
+                <div class="flex items-center gap-1">
+                  <i class="material-icons text-yellow-400 text-2xl">star</i>
+                  <span class="text-xl font-bold">{{ reviewSummary.averageRating }}</span>
+                </div>
+                <span class="text-gray-600">·</span>
+                <span class="text-gray-600">{{ reviewSummary.totalReviews }} değerlendirme</span>
+              </div>
+            </div>
+
+            <!-- Reviews List -->
+            <div v-if="loadingReviews" class="text-center py-8">
+              <span class="text-gray-500">Yorumlar yükleniyor...</span>
+            </div>
+            
+            <div v-else-if="reviews.length === 0" class="text-center py-8 bg-gray-50 rounded-xl">
+              <i class="material-icons text-6xl text-gray-300 mb-3">rate_review</i>
+              <p class="text-gray-600">Henüz değerlendirme yapılmamış</p>
+            </div>
+
+            <div v-else class="space-y-6">
+              <div 
+                v-for="review in reviews" 
+                :key="review.id"
+                class="pb-6 border-b border-gray-200 last:border-0"
+              >
+                <!-- Reviewer Info -->
+                <div class="flex items-center gap-3 mb-3">
+                  <div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg">
+                    {{ review.guestName.charAt(0).toUpperCase() }}
+                  </div>
+                  <div>
+                    <p class="font-semibold text-gray-900">{{ review.guestName }}</p>
+                    <p class="text-sm text-gray-600">
+                      {{ new Date(review.createdAt).toLocaleDateString('tr-TR', { 
+                        year: 'numeric', 
+                        month: 'long' 
+                      }) }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Rating Stars -->
+                <div class="flex items-center gap-1 mb-2">
+                  <i 
+                    v-for="(filled, index) in getStarArray(review.rating)" 
+                    :key="index"
+                    class="material-icons text-yellow-400"
+                  >
+                    {{ filled ? 'star' : 'star_border' }}
+                  </i>
+                </div>
+
+                <!-- Comment -->
+                <p class="text-gray-700 leading-relaxed">{{ review.comment }}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Right Column - Reservation Card -->
         <div class="lg:col-span-1">
+          <!-- Arşivlenmiş İlan -->
+          <div v-if="listing.isArchived" class="sticky top-8 border border-gray-300 rounded-xl shadow-lg p-6 bg-gray-50">
+            <div class="text-center space-y-4">
+              <div class="bg-white rounded-full w-20 h-20 mx-auto flex items-center justify-center">
+                <i class="material-icons text-5xl text-yellow-600">inventory_2</i>
+              </div>
+              <h3 class="text-xl font-bold text-gray-800">İlan Arşivlendi</h3>
+              <p class="text-gray-600">Bu ilan arşivlenmiş durumda, rezervasyon yapılamaz</p>
+              <button 
+                @click="router.push('/')"
+                class="w-full bg-rose-600 text-white py-3 rounded-lg font-semibold hover:bg-rose-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <i class="material-icons">home</i>
+                Ana Sayfaya Dön
+              </button>
+            </div>
+          </div>
+
           <!-- Kendi İlanı -->
-          <div v-if="isOwnListing" class="sticky top-8 border border-gray-300 rounded-xl shadow-lg p-6 bg-gray-50">
+          <div v-else-if="isOwnListing" class="sticky top-8 border border-gray-300 rounded-xl shadow-lg p-6 bg-gray-50">
             <div class="text-center space-y-4">
               <div class="bg-white rounded-full w-20 h-20 mx-auto flex items-center justify-center">
                 <i class="material-icons text-5xl text-rose-600">home_work</i>
@@ -501,13 +699,25 @@ onMounted(() => {
 
             <!-- Reserve Button -->
             <button 
-              @click="makeReservation"
-              class="w-full bg-rose-600 text-white py-3 rounded-lg font-semibold hover:bg-rose-700 transition-colors mb-4"
+              v-if="hasExistingReservation"
+              disabled
+              class="w-full bg-gray-400 text-white py-3 rounded-lg font-semibold cursor-not-allowed mb-4 flex items-center justify-center gap-2"
             >
-              Rezervasyon Yap
+              <i class="material-icons">check_circle</i>
+              Rezervasyon Zaten Yapıldı
+            </button>
+            <button 
+              v-else
+              @click="makeReservation"
+              :disabled="isCheckingReservation"
+              class="w-full bg-rose-600 text-white py-3 rounded-lg font-semibold hover:bg-rose-700 transition-colors mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ isCheckingReservation ? 'Kontrol ediliyor...' : 'Rezervasyon Yap' }}
             </button>
 
-            <p class="text-center text-sm text-gray-500 mb-4">Henüz ücret alınmayacak</p>
+            <p class="text-center text-sm text-gray-500 mb-4">
+              {{ hasExistingReservation ? 'Bu ilana aktif rezervasyonunuz var' : 'Henüz ücret alınmayacak' }}
+            </p>
 
             <!-- Price Breakdown -->
             <div v-if="totalNights > 0" class="space-y-3 pt-4 border-t border-gray-200">
