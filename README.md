@@ -12,8 +12,8 @@ StayIn, konaklama ve rezervasyon işlemlerini yönetmek için geliştirilmiş ta
 - Favori ilanları ekleme ve görüntüleme
 - İlan arama, filtreleme ve detay görüntüleme
 - Kendi ilanlarını yönetme (ekleme, düzenleme, silme)
-- Rezervasyon işlemleri (eklenecek)
-- Profil görüntüleme ve güncelleme (eklenecek)
+- Yorumlar ve değerlendirmeler: kullanıcılar ilanlara yorum bırakabilir ve puan verebilir
+- Rezervasyon ve ödeme: rezervasyon oluşturma, rezervasyon takibi ve temel ödeme akışları (ödeme sağlayıcı entegrasyonu gerekebilir)
 - Modern ve duyarlı arayüz
 
 ## Backend (stayin-backend)
@@ -65,9 +65,6 @@ StayIn, konaklama ve rezervasyon işlemlerini yönetmek için geliştirilmiş ta
 - `stayin-backend/` : Sunucu tarafı kodları
 - `stayin-frontend/` : Kullanıcı arayüzü kodları
 
-## Notlar
-- Geliştirme ortamı ayarları için ilgili `appsettings.Development.json` ve frontend yapılandırma dosyalarını kullanın.
-- API endpointleri ve arayüz bileşenleri için ilgili klasörleri inceleyebilirsiniz.
 
 ---
 Bu özet README, StayIn projesinin genel yapısını ve temel kurulum adımlarını açıklar. Detaylar için ilgili backend ve frontend klasörlerindeki README dosyalarını inceleyebilirsiniz.
